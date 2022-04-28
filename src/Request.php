@@ -76,7 +76,7 @@ class Request
      */
     public function signature(int|string $id): string
     {
-        return hash_hmac('sha256', $parts[0], $this->key);
+        return hash_hmac('sha256', $id, $this->key);
     }
 
     /**
