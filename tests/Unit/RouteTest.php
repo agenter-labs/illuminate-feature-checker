@@ -18,7 +18,7 @@ class RouteTest extends TestCase
             ]
         ]);
 
-        $key = '1:' . hash_hmac('sha256', 1, config('saas.key'));
+        $key = '1:' . app('saas.request')->signature(1);
         
         $this->get('feature', ['sub-tkn' => $key])->seeStatusCode(200);
     }
