@@ -58,13 +58,25 @@ class Request
             throw new SubscriptionException("Subscription token invalid");
         }
 
-        $signature = hash_hmac('sha256', $parts[0], $this->key);
+        $signature = $this->signature($parts[0]);
 
         if ($signature != $parts[1]) {
             throw new SubscriptionException('Subscription signature failed');
         }
 
         $this->subscription = app('saas')->subscription((int)$parts[0]);
+    }
+
+
+
+    /**
+     * Get subscription 
+     * 
+     * @return string
+     */
+    public function signature(int|string $id): string
+    {
+        return hash_hmac('sha256', $parts[0], $this->key);
     }
 
     /**
