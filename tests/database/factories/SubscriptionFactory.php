@@ -32,4 +32,13 @@ class SubscriptionFactory extends Factory
             'id' => self::$id
         ];
     }
+
+    public function enabled()
+    {
+        return $this->state(function () {
+            return [
+                'is_deleted' => 0,
+            ];
+        });
+    }
 }

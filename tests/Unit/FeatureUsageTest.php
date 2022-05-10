@@ -55,7 +55,7 @@ class FeatureUsageTest extends TestCase
     public function testDefaultCan()
     {
         app('saas')->getRepository()->clear();
-        $subscription = SubscriptionFactory::new()->create();
+        $subscription = SubscriptionFactory::new()->enabled()->create();
 
         $this->assertTrue(app('saas')->subscription($subscription['id'])->can('feature-one', true));
         $this->assertFalse(app('saas')->subscription($subscription['id'])->can('feature-one', false));
@@ -67,7 +67,7 @@ class FeatureUsageTest extends TestCase
         app('saas')->getRepository()->clear();
         $this->expectException(FeatureException::class);
 
-        $subscription = SubscriptionFactory::new()->create();
+        $subscription = SubscriptionFactory::new()->enabled()->create();
 
         app('saas')->subscription($subscription['id'])->allow('feature-one', false);
     }
@@ -77,7 +77,7 @@ class FeatureUsageTest extends TestCase
         app('saas')->getRepository()->clear();
         $subscription = SubscriptionFactory::new()
         ->has(FeatureFactory::new()->count(1))
-        ->create();
+        ->enabled()->create();
 
 
         $this->assertTrue(app('saas')->subscription($subscription['id'])->can('invoice', true));
@@ -88,7 +88,7 @@ class FeatureUsageTest extends TestCase
         app('saas')->getRepository()->clear();
         $subscription = SubscriptionFactory::new()
         ->has(FeatureFactory::new()->fullyUsed()->count(1))
-        ->create();
+        ->enabled()->create();
 
         $this->assertFalse(app('saas')->subscription($subscription['id'])->can('invoice', true));
     }
@@ -121,5 +121,39 @@ class FeatureUsageTest extends TestCase
         app('saas')->subscription(1)->recordUsage('feature2', 10);
         $this->assertFalse(app('saas')->subscription(1)->can('feature2', true));
 
+    }
+
+    public function testDelete()
+    {
+        app('saas')->getRepository()->clear();
+
+        app('saas')->sync(1, time() + 35000, [
+            [
+                'name' => 'feature1',
+                'dtype' => 'numeric',
+                'value' => '2'
+            ]
+        ]);
+
+        $this->assertTrue(app('saas')->subscription(1)->can('feature1', false));
+        app('saas')->subscription(1)->recordUsage('feature1');
+
+        $this->assertTrue(app('saas')->delete(1));
+        
+        $this->assertFalse(app('saas')->subscription(1)->can('feature1', false));
+
+
+        // Restore
+
+        app('saas')->sync(1, time() + 35000, [
+            [
+                'name' => 'feature1',
+                'dtype' => 'numeric',
+                'value' => '2'
+            ]
+        ]);
+
+        $this->assertTrue(app('saas')->subscription(1)->can('feature1', false));
+        app('saas')->subscription(1)->recordUsage('feature1');
     }
 }

@@ -92,7 +92,10 @@ class Saas
         // }
     
         $subscription = $this->repository->rememberForEver('subscription_' . $id, function () use($id) {
-            $subscription = call_user_func($this->subscriptionModelName . '::firstWhere', 'id', $id);
+            $subscription = call_user_func($this->subscriptionModelName . '::firstWhere', [
+                'id' => $id,
+                'is_deleted' => 0
+            ]);
             if (!$subscription) {
                 throw new SubscriptionException("Subscription does not exists");
             }
@@ -140,6 +143,34 @@ class Saas
     }
 
     /**
+     * delete
+     * 
+     * @param int $id
+     */
+    public function delete(int $id) {
+        
+        $subscription = call_user_func($this->subscriptionModelName . '::firstWhere', 'id', $id);
+
+        if (!$subscription) {
+            return;
+        }
+
+        $features = $subscription->features->pluck('name')->all();
+
+        foreach($features as $feature) {
+            $this->repository->delete($id . '_' . $feature);
+        }
+
+        $tableName = (new $this->featureModelName)->getTable();
+        DB::table($tableName)->where('subscription_id', $id)->delete();
+
+        $subscription->fill(['is_deleted' => 1])->save();
+        $this->repository->delete('subscription_' . $id);
+
+        return true;
+    }
+
+    /**
      * Sync
      * 
      * @param int $id
@@ -154,7 +185,7 @@ class Saas
             $subscription = call_user_func($this->subscriptionModelName . '::create', [
                 'id' => $id,
                 'end_date' => $endDate,
-                'is_deleted' => 1
+                'is_deleted' => 0
             ]);
         }
 
