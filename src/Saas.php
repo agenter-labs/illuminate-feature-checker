@@ -58,7 +58,7 @@ class Saas
      * @return \AgenterLab\FeatureChecker\Subscription
      * @throws \AgenterLab\FeatureChecker\Exceptions\SubscriptionException
      */
-    public function subscription(int $id): Subscription
+    public function subscription(int|string $id): Subscription
     {
         if (is_null($this->subscription)) {
             $this->subscription = $this->newInstance($id);
@@ -73,7 +73,7 @@ class Saas
      * @return \AgenterLab\FeatureChecker\Subscription
      * @throws \AgenterLab\FeatureChecker\Exceptions\SubscriptionException
      */
-    public function newInstance(int $id): Subscription
+    public function newInstance(int|string $id): Subscription
     {
 
         // if ($this->isPrefix) {
@@ -101,7 +101,7 @@ class Saas
      * @param int $ttl
      * @return null|array
      */
-    public function feature(int $id, string $name): null|array
+    public function feature(int|string $id, string $name): null|array
     {
         return $this->repository->get($id . '_' . $name);
     }
@@ -113,7 +113,7 @@ class Saas
      * @param array $features
      * @param bool $subscription
      */
-    public function delete(int $id, array $features, bool $subscription = false) {
+    public function delete(int|string $id, array $features, bool $subscription = false) {
 
         $values = array_map(function($name) use($id) {
             return $id . '_' . $name;
@@ -135,7 +135,7 @@ class Saas
      * @param int $ttl
      * @param array $features
      */
-    public function sync(int $id, int $ttl, array $features) {
+    public function sync(int|string $id, int $ttl, array $features) {
 
         $values = ['subscription_' . $id => $ttl];
 
@@ -158,7 +158,7 @@ class Saas
      * @param int $newValue
      * @param int $ttl
      */
-    public function recordUsage(int $id, string $name, int $newValue, int $ttl)
+    public function recordUsage(int|string $id, string $name, int $newValue, int $ttl)
     {
 
         $feature = $this->feature($id, $name);

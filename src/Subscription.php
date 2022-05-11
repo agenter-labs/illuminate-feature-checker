@@ -14,9 +14,9 @@ class Subscription
     private int $endDate;
 
     /**
-     * @var int
+     * @var int|string
      */
-    private int $id;
+    private int|string $id;
 
     /**
      * @var int
@@ -31,7 +31,7 @@ class Subscription
      * @return void
      * @throws \AgenterLab\FeatureChecker\Exceptions\SubscriptionExpiredException
      */
-    public function __construct(int $id, int $endDate)
+    public function __construct(int|string $id, int $endDate)
     {
         $this->id = $id;
         $this->endDate = $endDate;
