@@ -10,11 +10,7 @@ return [
     | config/cache.php file.
     |
     */
-    'storage' => [
-        'cache' => env('SAAS_STORAGE_CACHE', 'file'),
-        'subscription' => env('SAAS_MODEL_SUBSCRIPTION', ''),
-        'feature' => env('SAAS_MODEL_FEATURE', '')
-    ],
+    'storage' => env('SAAS_STORAGE', 'file'),
     'token_name' => env('SAAS_TOKEN_NAME', 'sub-tkn'),
     'key' => env('SAAS_KEY', ''),
 ];

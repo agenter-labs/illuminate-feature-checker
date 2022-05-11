@@ -16,11 +16,7 @@ class FeatureCheckerServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../config/saas.php', 'saas');
 
         $this->app->singleton('saas', function ($app) {
-            return new Saas(
-                config('saas.storage.cache'),
-                config('saas.storage.subscription'),
-                config('saas.storage.feature')
-            );
+            return new Saas(config('saas.storage'));
         });
 
         $this->app->singleton('saas.request', function ($app) {

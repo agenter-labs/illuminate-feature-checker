@@ -5,6 +5,7 @@ namespace AgenterLab\FeatureChecker;
 use Illuminate\Support\Facades\Cache;
 // use Illuminate\Support\Facades\Config;
 use AgenterLab\FeatureChecker\Exceptions\SubscriptionException;
+use AgenterLab\FeatureChecker\Exceptions\FeatureNotFoundException;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\DB;
 
@@ -14,16 +15,6 @@ class Saas
      * @var \Illuminate\Contracts\Cache\Repository
      */
     private Repository $repository;
-
-    /**
-     * @var string
-     */
-    private string $subscriptionModelName;
-
-    /**
-     * @var string
-     */
-    private string $featureModelName;
 
     // /**
     //  * @var bool
@@ -41,11 +32,9 @@ class Saas
      * @param string $storage
      * @return void
      */
-    public function __construct(string $storage, string $subscriptionModelName, string $featureModelName)
+    public function __construct(string $storage)
     {
         $this->repository = Cache::store($storage);
-        $this->subscriptionModelName = $subscriptionModelName;
-        $this->featureModelName = $featureModelName;
 
         // if ($this->repository instanceof \Illuminate\Cache\RedisStore) {
         //     $this->isPrefix = true;
@@ -91,22 +80,17 @@ class Saas
         //     $this->repository->getStore()->setPrefix('');
         // }
     
-        $subscription = $this->repository->rememberForEver('subscription_' . $id, function () use($id) {
-            $subscription = call_user_func($this->subscriptionModelName . '::firstWhere', [
-                'id' => $id,
-                'is_deleted' => 0
-            ]);
-            if (!$subscription) {
-                throw new SubscriptionException("Subscription does not exists");
-            }
-            return ['end_date' => $subscription->getEndDate()];
-        });
+        $ttl = $this->repository->get('subscription_' . $id);
+
+        if (!$ttl) {
+            throw new SubscriptionException("Subscription not exists");
+        }
 
         // if ($this->isPrefix) {
         //     $this->repository->getStore()->setPrefix('sub_' . $id);
         // }
         
-        return new Subscription($id, $subscription['end_date']);
+        return new Subscription($id, $ttl);
     }
 
     /**
@@ -117,55 +101,29 @@ class Saas
      * @param int $ttl
      * @return null|array
      */
-    public function feature(int $id, string $name, int $ttl): null|array
+    public function feature(int $id, string $name): null|array
     {
-
-        $key = $id . '_' . $name;
-
-        $feature = $this->repository->remember($key, $ttl, function () use($id, $name) {
-
-            $feature = call_user_func($this->featureModelName . '::firstWhere', [
-                'subscription_id' => $id,
-                'name' => $name
-            ]);
-            if (!$feature) {
-                return null;
-            }
-
-            return implode('|', [$feature->dtype, $feature->value, $feature->usage]);
-        });
-
-        if ($feature) {
-            $feature = explode('|', $feature, 3);
-        }
-
-        return $feature;
+        return $this->repository->get($id . '_' . $name);
     }
 
     /**
      * delete
      * 
      * @param int $id
+     * @param array $features
+     * @param bool $subscription
      */
-    public function delete(int $id) {
+    public function delete(int $id, array $features, bool $subscription = false) {
+
+        $values = array_map(function($name) use($id) {
+            return $id . '_' . $name;
+        }, $features);
+
+        if ($subscription) {
+            $values[] = 'subscription_' . $id;
+        }
         
-        $subscription = call_user_func($this->subscriptionModelName . '::firstWhere', 'id', $id);
-
-        if (!$subscription) {
-            return;
-        }
-
-        $features = $subscription->features->pluck('name')->all();
-
-        foreach($features as $feature) {
-            $this->repository->delete($id . '_' . $feature);
-        }
-
-        $tableName = (new $this->featureModelName)->getTable();
-        DB::table($tableName)->where('subscription_id', $id)->delete();
-
-        $subscription->fill(['is_deleted' => 1])->save();
-        $this->repository->delete('subscription_' . $id);
+        $this->repository->deleteMultiple($values);
 
         return true;
     }
@@ -174,40 +132,22 @@ class Saas
      * Sync
      * 
      * @param int $id
-     * @param int $endDate
+     * @param int $ttl
      * @param array $features
      */
-    public function sync(int $id, int $endDate, array $features) {
+    public function sync(int $id, int $ttl, array $features) {
 
-        $subscription = call_user_func($this->subscriptionModelName . '::firstWhere', 'id', $id);
-
-        if (!$subscription) {
-            $subscription = call_user_func($this->subscriptionModelName . '::create', [
-                'id' => $id,
-                'end_date' => $endDate,
-                'is_deleted' => 0
-            ]);
-        }
-
-        $existingFeatures = $subscription->features->keyBy('name')->all();
-
-        $values = [];
-        $tableName = (new $this->featureModelName)->getTable();
+        $values = ['subscription_' . $id => $ttl];
 
         foreach($features as $feature) {
-            if (empty($existingFeatures[$feature['name']]))
-            {
-                $values[] = [
-                    'subscription_id' => $id,
-                    'name' => $feature['name'],
-                    'dtype' => $feature['dtype'],
-                    'value' => $feature['value'],
-                    'usage' => $feature['usage'] ?? ($feature['dtype'] == 'numeric' ? 0 : '')
-                ];
-            }
+            $values[$id . '_' . $feature['name']] = [
+                'd' => $feature['dtype'],
+                'v' => $feature['value'],
+                'u' => $feature['usage'] ?? 0
+            ];
         }
 
-        DB::table($tableName)->insert($values);
+        $this->repository->putMany($values , $ttl);
     }
 
     /**
@@ -215,18 +155,24 @@ class Saas
      * 
      * @param int $id
      * @param string $name
-     * @param int $usage
+     * @param int $newValue
+     * @param int $ttl
      */
-    public function recordUsage(int $id, string $name, int $usage)
+    public function recordUsage(int $id, string $name, int $newValue, int $ttl)
     {
-        $tableName = (new $this->featureModelName)->getTable();
-        DB::table($tableName)
-        ->where([
-            'subscription_id' => $id,
-            'name' => $name
-        ])
-        ->update(['usage' => $usage]);
 
-        $this->repository->delete($id . '_' . $name);
+        $feature = $this->feature($id, $name);
+
+        if (!$feature) {
+            throw new FeatureNotFoundException;
+        }
+
+        if ($feature['d'] != 'numeric') {
+            return;
+        }
+
+        $feature['u'] = (int)$feature['u'] + $newValue;
+
+        $this->repository->set($id . '_' . $name, $feature, $ttl);
     }
 }

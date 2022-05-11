@@ -3,32 +3,19 @@
 namespace Tests;
 
 use Laravel\Lumen\Testing\TestCase as BaseTestCase;
-use Laravel\Lumen\Testing\DatabaseMigrations;
 use Laravel\Lumen\Http\Request as LumenRequest;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Illuminate\Testing\TestResponse;
 
 abstract class TestCase extends BaseTestCase
 {
-    use CreatesApplication, DatabaseMigrations;
+    use CreatesApplication;
 
-    public function runDatabaseMigrations()
-    {
-        $path = 'tests/database/migrations';
-
-        $this->artisan('migrate:fresh', ['--path' => $path]);
-
-        $this->beforeApplicationDestroyed(function () use ($path) {
-            $this->artisan('migrate:rollback', ['--path' => $path]);
-        });
-    }
 
     protected function setUp(): void
     {    
         parent::setUp();
         config([
-            'saas.storage.subscription' => Models\Subscription::class,
-            'saas.storage.feature' => Models\Feature::class,
             'saas.key' => 'a48cf9fc4972f4939356676c5f032301',
             'auth.guards.api.driver' => 'token'
         ]);

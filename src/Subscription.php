@@ -77,18 +77,15 @@ class Subscription
      */
     public function can(string $featureName, string|int|null $dfValue = null): bool
     {
-        $feature = app('saas')->feature($this->id, $featureName, $this->ttl);
+        $feature = app('saas')->feature($this->id, $featureName);
 
         if (!$feature) {
             return (bool)$dfValue;
         }
 
-        // Explode feature dtype, value, usage
-        list($dtype, $value, $usage) = $feature;
+        $method = 'validate' . ucfirst($feature['d']);
 
-        $method = 'validate' . ucfirst($dtype);
-
-        return $this->$method($value, $usage, $dfValue);
+        return $this->$method($feature['v'], $feature['u'], $dfValue);
     }
 
     /**
@@ -124,21 +121,6 @@ class Subscription
      */
     public function recordUsage(string $featureName, int $newValue = 1)
     {
-        $feature = app('saas')->feature($this->id, $featureName, $this->ttl);
-
-        if (!$feature) {
-            throw new FeatureNotFoundException;
-        }
-
-        // Explode feature dtype, value, usage
-        list($dtype, $value, $usage) = $feature;
-
-        if ($dtype != 'numeric') {
-            return;
-        }
-
-        $usage = (int)$usage + $newValue;
-
-        app('saas')->recordUsage($this->id, $featureName, $usage);
+        app('saas')->recordUsage($this->id, $featureName, $newValue, $this->ttl);
     }
 }

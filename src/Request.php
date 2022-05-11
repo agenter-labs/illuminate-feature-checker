@@ -49,7 +49,7 @@ class Request
         }
         
         if (empty($token)) {
-            throw new SubscriptionException("Subscription token missing");
+            return;
         }
 
         $parts = explode(':', $token);
