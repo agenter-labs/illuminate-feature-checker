@@ -24,6 +24,11 @@ class Subscription
     private int $ttl;
 
     /**
+     * @var array
+     */
+    private array $aliases = [];
+
+    /**
      * Create a new confide instance.
      *
      * @param int $id
@@ -77,7 +82,7 @@ class Subscription
      */
     public function can(string $featureName, string|int|null $dfValue = null): bool
     {
-        $feature = app('saas')->feature($this->id, $featureName);
+        $feature = app('saas')->feature($this->id, $this->keyName($featureName));
 
         if (!$feature) {
             return (bool)$dfValue;
@@ -121,6 +126,25 @@ class Subscription
      */
     public function recordUsage(string $featureName, int $newValue = 1)
     {
-        app('saas')->recordUsage($this->id, $featureName, $newValue, $this->ttl);
+        app('saas')->recordUsage($this->id, $this->keyName($featureName), $newValue, $this->ttl);
+    }
+
+    private function keyName(string $name): string {
+        return $this->aliases[$name] ?? $name;
+    }
+
+    /**
+     * Set aliases
+     * 
+     * @param array $aliases
+     * @param bool $clear
+     */
+    public function setAliases(array $aliases, bool $clear = false) {
+
+        if ($clear) {
+            $this->aliases = $aliases;
+        }
+
+        $this->aliases = array_merge($this->aliases, $aliases);
     }
 }

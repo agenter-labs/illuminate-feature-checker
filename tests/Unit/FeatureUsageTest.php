@@ -158,4 +158,19 @@ class FeatureUsageTest extends TestCase
         $this->assertTrue(app('saas')->subscription(1)->can('feature1', false));
         app('saas')->subscription(1)->recordUsage('feature1');
     }
+
+    public function testAliases()
+    {
+        app('saas')->getRepository()->clear();
+
+        app('saas')->sync(1, time() + 35000, [
+            [
+                'name' => 'feature1',
+                'dtype' => 'string',
+                'value' => 'Y'
+            ]
+        ]);
+        app('saas')->subscription(1)->setAliases(['alias1' => 'feature1']);
+        $this->assertTrue(app('saas')->subscription(1)->can('alias1', 'Y'));
+    }
 }
