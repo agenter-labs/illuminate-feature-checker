@@ -13,4 +13,5 @@ return [
     'storage' => env('SAAS_STORAGE', 'file'),
     'token_name' => env('SAAS_TOKEN_NAME', 'sub-tkn'),
     'key' => env('SAAS_KEY', ''),
+    'request_restrict' => false,
 ];

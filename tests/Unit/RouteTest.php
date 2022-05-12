@@ -39,4 +39,24 @@ class RouteTest extends TestCase
         
         $this->get('feature', ['sub-tkn' => $key])->seeStatusCode(500);
     }
+
+    public function testMiddlewareRestrictConfig()
+    {
+        config([
+            'saas.request_restrict' => true
+        ]);
+
+        app('saas')->getRepository()->clear();
+        app('saas')->sync(1, time() + 35000, [
+            [
+                'name' => 'feature1',
+                'dtype' => 'numeric',
+                'value' => '50'
+            ]
+        ]);
+
+        $key = '2:' . app('saas.request')->signature(1);
+        
+        $this->get('feature', ['sub-tkn' => $key])->seeStatusCode(500);
+    }
 }

@@ -6,16 +6,6 @@ use AgenterLab\FeatureChecker\Exceptions\SubscriptionException;
 
 class Request
 {
-    
-    /**
-     * @var string
-     */
-    private string $key;
-
-    /**
-     * @var string
-     */
-    private string $tokenName;
 
     /**
      * @var \AgenterLab\FeatureChecker\Subscription
@@ -28,10 +18,9 @@ class Request
      * @param string $storage
      * @return void
      */
-    public function __construct(string $key, string $tokenName)
+    public function __construct(private string $key, private string $tokenName, private bool $restict)
     {
-        $this->key = $key;
-        $this->tokenName = $tokenName;
+
     }
 
     /**
@@ -55,12 +44,18 @@ class Request
         $parts = explode(':', $token);
 
         if (count($parts) != 2) {
+            if (!$this->restict) {
+                return;
+            }
             throw new SubscriptionException("Subscription token invalid");
         }
 
         $signature = $this->signature($parts[0]);
 
         if ($signature != $parts[1]) {
+            if (!$this->restict) {
+                return;
+            }
             throw new SubscriptionException('Subscription signature failed');
         }
 

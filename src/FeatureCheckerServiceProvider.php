@@ -22,7 +22,8 @@ class FeatureCheckerServiceProvider extends ServiceProvider
         $this->app->singleton('saas.request', function ($app) {
             return new Request(
                 config('saas.key'),
-                config('saas.token_name')
+                config('saas.token_name'),
+                config('saas.request_restrict')
             );
         });
     }
