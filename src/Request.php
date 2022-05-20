@@ -59,7 +59,14 @@ class Request
             throw new SubscriptionException('Subscription signature failed');
         }
 
-        $this->subscription = app('saas')->newInstance($parts[0]);
+        try {
+            $this->subscription = app('saas')->newInstance($parts[0]);
+        } catch (SubscriptionException $e) {
+            if ($this->restict) {
+                throw $e;
+            }
+        }
+        
     }
 
 
