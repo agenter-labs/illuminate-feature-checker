@@ -16,11 +16,6 @@ class Saas
      */
     private Repository $repository;
 
-    // /**
-    //  * @var bool
-    //  */
-    // private bool $isPrefix = false;
-
     /**
      * @var \AgenterLab\FeatureChecker\Subscription
      */
@@ -36,10 +31,9 @@ class Saas
     {
         $this->repository = Cache::store($storage);
 
-        // if ($this->repository instanceof \Illuminate\Cache\RedisStore) {
-        //     $this->isPrefix = true;
-        //     $this->repository->getStore()->setPrefix('');
-        // }
+        if ($this->repository instanceof \Illuminate\Cache\RedisStore) {
+            $this->repository->getStore()->setPrefix('');
+        }
     }
 
     /**
@@ -76,20 +70,12 @@ class Saas
     public function newInstance(int|string $id): Subscription
     {
 
-        // if ($this->isPrefix) {
-        //     $this->repository->getStore()->setPrefix('');
-        // }
-    
         $ttl = $this->repository->get('subscription_' . $id);
 
         if (!$ttl) {
             throw new SubscriptionException("Subscription not exists");
         }
 
-        // if ($this->isPrefix) {
-        //     $this->repository->getStore()->setPrefix('sub_' . $id);
-        // }
-        
         return new Subscription($id, $ttl);
     }
 
